@@ -41,10 +41,9 @@ export function Features() {
           />
           <Reveal className="max-w-sm md:pb-2">
             <p className="text-sm leading-6 text-muted-foreground">
-              {availableCount} capabilities are part of the current Android app.{" "}
               {plannedCount > 0
-                ? `The remaining ${plannedCount} are not available in this release, and are marked as such below.`
-                : "Each card below is part of the shipped app."}
+                ? `${availableCount} capabilities are part of the current Android app. The remaining ${plannedCount} are not available in this release, and are marked as such below.`
+                : `All ${features.length} capabilities below are part of the current Android app. The cards describe what the shipped build does today.`}
             </p>
           </Reveal>
         </div>
@@ -105,9 +104,11 @@ export function Features() {
 
         <Reveal className="mt-8">
           <p className="max-w-2xl text-xs leading-6 text-muted-foreground">
+            {" "}
             Object detection only recognises supported visible objects, and its
-            accuracy depends on light, angle, distance, and the phone's camera.
-            It is not a substitute for a white cane, a guide dog, or mobility
+            accuracy depends on light, angle, distance, and the phone&apos;s
+            camera. Navigation and emergency features are supporting tools too;
+            none of them replace a white cane, a guide dog, or mobility
             training.
           </p>
         </Reveal>

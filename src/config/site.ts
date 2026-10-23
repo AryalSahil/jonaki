@@ -61,55 +61,49 @@ export const features: Feature[] = [
     icon: "scan",
     title: "AI-assisted object detection",
     description:
-      "The phone camera looks for supported visible objects in the path ahead and reports what the model recognises.",
+      "Camera obstacle scanning looks for supported visible objects in the path ahead and reports what the model recognises.",
     status: "available",
   },
   {
     icon: "volume",
     title: "Spoken alerts",
     description:
-      "When a supported object is detected, Jonaki speaks a concise warning aloud so your hands stay free.",
+      "When a supported object is detected, Jonaki speaks a concise warning aloud, with spoken guidance and directional audio cues.",
     status: "available",
   },
   {
     icon: "vibrate",
     title: "Vibration feedback",
     description:
-      "An optional tactile alert accompanies detections for noisy places, or when you prefer to keep the speaker quiet.",
+      "Haptic alerts and directional warnings accompany detections, for noisy places or when you prefer to keep the speaker quiet.",
     status: "available",
   },
   {
     icon: "mic",
     title: "Voice commands",
     description:
-      "Hands-free control by voice is not part of the current release. This card will only be labelled as available once it ships and is tested.",
-    status: "not-in-release",
+      "Ask about the scene ahead or check the assistant's status hands-free, without reaching for the screen.",
+    status: "available",
   },
   {
     icon: "map",
     title: "Navigation assistance",
     description:
-      "Turn-by-turn route guidance is not included in the current release. Jonaki does not currently plan or follow a GPS route.",
-    status: "not-in-release",
+      "Pedestrian navigation with turn-by-turn spoken guidance, using GPS and OpenStreetMap map data.",
+    status: "available",
   },
   {
     icon: "lifebuoy",
     title: "Emergency assistance",
     description:
-      "Automatic emergency calling and contact alerts are not part of the current release. Use your phone's own emergency features instead.",
-    status: "not-in-release",
+      "A dedicated emergency screen with an SOS siren, GPS location sharing, and quick access to your contacts.",
+    status: "available",
   },
 ];
 
 export const releaseFacts = () => {
-  const {
-    version,
-    fileSize,
-    minAndroid,
-    releaseDate,
-    requirements,
-    sha256,
-  } = site.release;
+  const { version, fileSize, minAndroid, releaseDate, requirements, sha256 } =
+    site.release;
   const facts = [
     version ? { label: "Application version", value: version } : null,
     fileSize ? { label: "APK file size", value: fileSize } : null,

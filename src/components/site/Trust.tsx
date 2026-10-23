@@ -18,7 +18,7 @@ const practices = [
   },
   {
     title: "High-contrast text",
-    body: "Ink on warm white, with accent colour kept to small details rather than essential text.",
+    body: "Warm white on deep midnight, with accent colour kept to small details rather than essential text.",
   },
   {
     title: "Reduced-motion support",

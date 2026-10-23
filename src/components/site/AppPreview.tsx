@@ -43,9 +43,9 @@ export function AppPreview() {
           />
           <Reveal className="max-w-sm md:pb-2">
             <p className="text-sm leading-6 text-muted-foreground">
-              These are illustrative mockups, not screenshots from a released
-              build. Real screenshots will replace them once supplied by the
-              project owner.
+              These previews recreate the current Android interface — welcome,
+              dashboard, walking assistance, and permissions. They are
+              illustrations, not device captures.
             </p>
           </Reveal>
         </div>
@@ -86,9 +86,8 @@ export function AppPreview() {
 
         <Reveal className="mt-10">
           <p className="max-w-2xl text-xs leading-6 text-muted-foreground">
-            There is no emergency-assistance screen here because emergency
-            calling is not part of the current release. The gallery only shows
-            screens that exist today.
+            The gallery shows four core screens. Captures of emergency help,
+            navigation, and settings will be added as they become available.
           </p>
         </Reveal>
       </div>
@@ -123,7 +122,8 @@ export function AppPreview() {
 
               <div className="mt-6 grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-8">
                 <div className="flex justify-center rounded-lg border border-border bg-muted/40 p-5">
-                  <PhoneMockup screen={current.id} className="max-w-[210px]" />
+                  {" "}
+                  <PhoneMockup screen={current.id} className="max-w-[260px]" />
                 </div>
 
                 <div>

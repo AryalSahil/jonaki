@@ -8,12 +8,12 @@ const steps = [
   {
     number: "01",
     title: "Open Jonaki",
-    body: "Install the app and open it. Android asks for camera access when you start walking assistance; you can review or change that permission at any time in system settings.",
+    body: "Install the app and open it. Android asks for camera access when you start walking assistance, microphone access for voice commands, and location if you use navigation or emergency location sharing. You can review or change each permission in system settings.",
   },
   {
     number: "02",
     title: "Start walking assistance",
-    body: "Hold the phone so the camera sees the path ahead, then start the assistant. The camera view is analysed for supported visible objects.",
+    body: "Hold the phone so the camera sees the path ahead, then start the assistant. The camera view is analysed for supported visible objects, or switch to pedestrian navigation for spoken walking directions.",
   },
   {
     number: "03",
@@ -85,14 +85,14 @@ export function HowItWorks() {
 
         <Reveal className="lg:sticky lg:top-28">
           <figure className="flex flex-col items-center rounded-lg border border-border bg-muted/30 px-6 py-10 sm:px-10">
-            <PhoneMockup screen="walking" />
+            <PhoneMockup screen="dashboard" />
             <figcaption className="mt-8 max-w-xs text-center text-xs leading-5 text-muted-foreground">
               <span className="mb-2 flex items-center justify-center gap-1.5 text-[0.6rem] uppercase tracking-[0.16em]">
                 <Volume2 className="h-3 w-3" aria-hidden="true" />
                 Illustrative mockup
               </span>
-              A static preview of the walking-assistance screen. No product
-              video is available on this site yet.
+              A static preview of the Jonaki dashboard. No product video is
+              available on this site yet.
             </figcaption>
           </figure>
         </Reveal>

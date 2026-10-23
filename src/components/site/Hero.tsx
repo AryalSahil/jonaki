@@ -59,7 +59,7 @@ export function Hero() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
       >
-        <div className="absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(55%_60%_at_74%_18%,var(--lavender),transparent_72%)] opacity-80" />
+        <div className="absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(55%_60%_at_74%_18%,var(--glow),transparent_72%)] opacity-90" />
         <div className="grid-lines absolute inset-0 opacity-40" />
       </div>
 
@@ -184,7 +184,7 @@ export function Hero() {
           </svg>
 
           <div className="relative z-10">
-            <PhoneMockup screen="walking" />
+            <PhoneMockup screen="welcome" />
           </div>
 
           <p className="mt-7 flex items-center gap-2 rounded-full border border-border bg-background/80 px-3.5 py-1.5 text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground backdrop-blur">

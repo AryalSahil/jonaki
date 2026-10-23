@@ -15,7 +15,7 @@ export function Download() {
     <section
       id="download"
       aria-labelledby="download-heading"
-      className="relative overflow-hidden bg-navy text-navy-foreground"
+      className="relative overflow-hidden border-y border-white/10 bg-navy text-navy-foreground"
     >
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         <svg

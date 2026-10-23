@@ -16,12 +16,12 @@ export function Faq() {
     {
       question: "What is Jonaki?",
       answer:
-        "Jonaki is an Android walking assistant that uses the phone's camera to look for supported visible objects, then speaks a short alert and, if you enable it, vibrates. It is designed as an extra source of information for blind and low-vision users — not as a replacement for existing mobility tools.",
+        "Jonaki is an Android walking assistant. It uses the phone's camera to look for supported visible objects, then speaks a short alert and, if you enable it, vibrates. The app also includes pedestrian navigation with spoken directions, hands-free voice commands, and an emergency help screen. It is designed as an extra source of information for blind and low-vision users — not as a replacement for existing mobility tools.",
     },
     {
       question: "Who can use it?",
       answer:
-        "Jonaki is intended for blind and visually impaired Android users, as well as family members, volunteers, and organisations helping someone set it up. It needs a phone with a working camera and speaker. The minimum Android version is listed in the download section once a release is published.",
+        "Jonaki is intended for blind and visually impaired Android users, as well as family members, volunteers, and organisations helping someone set it up. It needs an Android phone with a working camera and speaker; voice commands need a microphone, and navigation and location sharing need location access. The minimum Android version is listed in the download section once a release is published.",
     },
     {
       question: "How do I download the Android APK?",
@@ -60,7 +60,7 @@ export function Faq() {
     {
       question: "Does Jonaki require an internet connection?",
       answer:
-        "Downloading the APK needs a connection. Object detection works from the phone's camera, but any feature that depends on online services in your build will need a connection too. Check the release notes for the build you install; this page does not list network behaviour it has not verified.",
+        "Downloading the APK needs a connection. Walking assistance and spoken alerts work from the phone's camera and speaker. Pedestrian navigation uses GPS and OpenStreetMap map data, which may need a connection for maps, and emergency location sharing may need mobile data or Wi-Fi. Check the release notes for your build for the exact behaviour.",
     },
     {
       question: "Which Android versions are supported?",
@@ -75,7 +75,7 @@ export function Faq() {
     {
       question: "How does Jonaki use camera and location permissions?",
       answer:
-        "The camera is used while walking assistance is active, to look for supported objects, and Android asks before it is granted. Your build may request other permissions, such as location, for specific features; Android shows each request before it is granted, and you can decline or revoke it in settings. This website itself requests no camera, microphone, or location access.",
+        "Camera access is used while walking assistance is active, to look for supported objects. Microphone access is used for voice commands and scene questions. Location is optional and is requested when you use pedestrian navigation or emergency location sharing. Android asks before each permission is granted, Jonaki explains what it is for, and you can decline or revoke any of them in Android settings. This website itself requests no camera, microphone, or location access.",
     },
     {
       question: "Where can I report a problem?",

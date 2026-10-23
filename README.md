@@ -4,9 +4,10 @@ The public website for **Jonaki, a voice-first walking assistant for Android**.
 It explains the product honestly, documents the app's current capabilities, and
 provides a configurable way to distribute the Android APK.
 
-This is a static, single-page marketing site. It has no accounts, no database,
-no admin panel, and no analytics. Nothing is fabricated: unavailable features
-and unpublished release details are labelled as such.
+This is a static, single-page marketing site with a dark, near-monochrome
+theme. It has no accounts, no database, no admin panel, and no analytics.
+Nothing is fabricated: unavailable features and unpublished release details are
+labelled as such.
 
 ## Stack
 
@@ -17,6 +18,8 @@ and unpublished release details are labelled as such.
   `IntersectionObserver`
 - Fonts: Instrument Serif (display) and Inter (interface), loaded from Google
   Fonts with a system-serif fallback
+- Dark-only palette defined in `src/index.css`: deep midnight surfaces, warm
+  white text, soft lavender glow, and firefly gold accents
 
 The Convex/auth starter files from the template are still present but are not
 routed or used by this site. `src/main.tsx` only renders the landing page and
@@ -52,7 +55,7 @@ src/components/site/
   Faq.tsx                         accordion FAQ
   Footer.tsx                      navigation, legal dialogs, version line
   ApkDownload.tsx                 download button, HEAD probe, install dialog
-  PhoneMockup.tsx                 illustrative Android screens
+  PhoneMockup.tsx                 dark Android screen mockups + image override
   Brand.tsx                       original firefly + path mark
   Reveal.tsx / SectionHeading.tsx shared layout primitives
 src/pages/Landing.tsx             page composition
@@ -135,17 +138,26 @@ For other servers:
 
 ## Content and assets to update
 
-- **Screenshots.** The gallery currently shows clearly labelled illustrative
-  mockups built in `src/components/site/PhoneMockup.tsx`. When you have real
-  screenshots, export them at 1080×2340 and replace the mockup in the gallery
-  (and the hero/how-it-works panels) with `<img>` elements. Keep the
-  "Illustrative" wording only if the images are still mockups.
-- **Screens that do not exist.** The gallery intentionally has four screens.
-  There is no emergency-assistance screen because that feature is not in the
-  release. Add it when it ships.
-- **Features.** `src/config/site.ts` marks three features as
-  `not-in-release`. Only change those to `available` once the shipped APK
-  actually includes and has been tested with them.
+- **Screenshots.** The phones in the hero, how-it-works panel, gallery, and
+  lightbox are HTML recreations of the supplied welcome, dashboard, permissions,
+  and walking screens (`src/components/site/PhoneMockup.tsx`). To use real
+  captures instead, save PNGs in `public/screens/` and fill in the
+  `screenImages` map near the top of that file:
+  ```ts
+  export const screenImages = {
+    welcome: "/screens/welcome.png",
+    dashboard: "/screens/dashboard.png",
+    permissions: "/screens/permissions.png",
+  };
+  ```
+  The images are rendered with `object-cover` in a 9:19 frame, so export at
+  roughly 1080×2340 or the same aspect ratio. Update the gallery captions if the
+  captures differ from the recreations.
+- **What is in the release.** The supplied screen captures show obstacle
+  scanning, pedestrian navigation, voice commands, emergency help, and the
+  permissions flow, so all six feature cards are marked `available` in
+  `src/config/site.ts`. Confirm each one in the installed release before
+  publishing and update any card that is not actually shipped.
 - **Support contact.** Set `contactEmail` to a real, monitored address. Until
   then the FAQ and footer clearly state that no support address is published.
 - **Legal pages.** Put real policy URLs in `site.legal.privacyUrl` and
@@ -154,8 +166,9 @@ For other servers:
 - **Release checksum.** Generate it from the exact file you publish:
   `sha256sum Jonaki-Android-v1.0.0.apk`. The download section shows it only
   when provided.
-- **Social preview.** `public/og-image.png` is a 1200×630 branded card. Replace
-  it if the branding changes. Before launch, set the deployed domain in
+- **Social preview and icons.** `public/og-image.png` is a 1200×630 dark
+  branded card; app icons are dark tiles generated from the firefly mark. Replace
+  them if the branding changes. Before launch, set the deployed domain in
   `index.html` for `og:image` and add an absolute canonical URL.
 - **Analytics.** None is configured. If you add privacy-friendly analytics,
   document it in the privacy policy first.
@@ -199,10 +212,11 @@ links point to existing section IDs.
 - [ ] Upload the signed APK and set `site.release.apkUrl`
 - [ ] Verify and fill version, APK size, minimum Android version, release date,
       device requirements, and SHA-256
-- [ ] Add real screenshots (currently illustrative mockups)
+- [ ] Optionally replace the HTML screen mockups with real PNG captures via
+      `screenImages`
 - [ ] Add a monitored support email (`site.contactEmail`)
 - [ ] Publish privacy policy and terms, then fill `site.legal`
-- [ ] Confirm the three roadmap features are still accurate for the shipped app
+- [ ] Verify the six feature descriptions against the installed release
 - [ ] Replace the relative `og:image` with an absolute deployed URL and add a
       canonical link
 - [ ] Test the download on a real Android device (the site reports the

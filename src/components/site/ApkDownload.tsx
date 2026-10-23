@@ -109,7 +109,7 @@ const buttonStyles = {
   solid:
     "bg-foreground text-background hover:bg-ink-soft focus-visible:outline-foreground",
   inverted:
-    "bg-background text-foreground hover:bg-lavender focus-visible:outline-background",
+    "bg-gold text-[#141109] hover:bg-gold/90 focus-visible:outline-foreground",
   outline: "border border-border bg-transparent text-foreground hover:bg-muted",
 } as const;
 
@@ -212,7 +212,7 @@ export function InstallInstructionsLink({
         className={cn(
           "inline-flex min-h-11 items-center gap-1.5 text-sm font-medium underline decoration-1 underline-offset-[6px] transition-opacity hover:opacity-70",
           inverted
-            ? "text-navy-foreground/80 focus-visible:outline-background"
+            ? "text-navy-foreground/80 focus-visible:outline-foreground"
             : "text-ink-soft",
           className,
         )}
@@ -448,7 +448,7 @@ export function ApkStatusLine({
     <p
       className={cn(
         "text-xs leading-5",
-        inverted ? "text-navy-foreground/55" : "text-muted-foreground",
+        inverted ? "text-navy-foreground/70" : "text-muted-foreground",
         className,
       )}
       role={live ? "status" : undefined}
