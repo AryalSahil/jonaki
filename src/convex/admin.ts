@@ -8,7 +8,15 @@ import {
 } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
 
-import { action, internal, mutation, query } from "./_generated/server";
+import {
+  action,
+  internalAction,
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
+import { internal } from "./_generated/api";
 import { logActivity, requireAdmin } from "./lib/auth";
 
 /**
@@ -19,11 +27,10 @@ import { logActivity, requireAdmin } from "./lib/auth";
  *   JONAKI_ADMIN_EMAIL            — login address for the admin account
  *   JONAKI_ADMIN_INITIAL_PASSWORD — initial password (must be changed)
  *
- * The bootstrap action is internal: it can only be run from the Convex
- * dashboard or CLI by someone with deployment access, never by a website
- * visitor. It is idempotent — re-running it rotates the password back to the
- * environment value and forces another password change, which is useful if
- * the environment variables are rotated.
+ * `bootstrapAdmin` is an *internal* action: it can only be run from the
+ * Convex dashboard or CLI by someone with deployment access, never by a
+ * website visitor. It is idempotent — re-running it rotates the password back
+ * to the environment value and forces another password change.
  *
  * Passwords are stored by the Convex Auth Password provider (scrypt-hashed);
  * they never appear in this codebase, in client bundles, or in logs.
@@ -47,7 +54,7 @@ function readAdminEnv(): { email: string; password: string } {
  * variables. Run with:
  *   bunx convex run admin:bootstrapAdmin
  */
-export const bootstrapAdmin = action({
+export const bootstrapAdmin = internalAction({
   args: {},
   handler: async (ctx) => {
     const { email, password } = readAdminEnv();
@@ -92,7 +99,7 @@ export const bootstrapAdmin = action({
 });
 
 /** Internal: flag the account as still using the bootstrap password. */
-export const markPasswordChangeRequired = mutation({
+export const markPasswordChangeRequired = internalMutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.userId, { mustChangePassword: true });
@@ -100,7 +107,7 @@ export const markPasswordChangeRequired = mutation({
 });
 
 /** Internal: record the bootstrap event in the activity log. */
-export const recordBootstrap = mutation({
+export const recordBootstrap = internalMutation({
   args: { userId: v.id("users"), email: v.string() },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.userId);
@@ -211,7 +218,7 @@ export const changePassword = action({
 });
 
 /** Internal: clear the must-change flag and log the change. */
-export const afterPasswordChange = mutation({
+export const afterPasswordChange = internalMutation({
   args: { userId: v.id("users"), email: v.string() },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
@@ -226,26 +233,12 @@ export const afterPasswordChange = mutation({
 });
 
 /** Internal: fetch a user record for the change-password action. */
-export const getUser = query({
+export const getUser = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
     return { _id: user._id, email: user.email, role: user.role };
-  },
-});
-
-/** Internal helper for logout-everywhere bookkeeping. */
-export const logLogoutEverywhere = mutation({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) return;
-    await logActivity(ctx, user, {
-      action: "admin.logout_everywhere",
-      targetType: "user",
-      targetId: args.userId,
-    });
   },
 });
 
@@ -258,5 +251,46 @@ export const requireAdminSession = query({
       email: admin.email ?? null,
       mustChangePassword: admin.mustChangePassword === true,
     };
+  },
+});
+
+/**
+ * Admin: sign every session for this user out (logout everywhere). Runs as an
+ * action because session invalidation needs an action context.
+ */
+export const logoutEverywhere = action({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) {
+      throw new ConvexError({
+        code: "UNAUTHORIZED",
+        message: "You must be signed in.",
+      });
+    }
+    const user = await ctx.runQuery(internal.admin.getUser, { userId });
+    if (!user || user.role !== "admin") {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "Administrator access is required.",
+      });
+    }
+    await ctx.runMutation(internal.admin.recordLogoutEverywhere, { userId });
+    await invalidateSessions(ctx, { userId });
+    return { ok: true as const };
+  },
+});
+
+/** Internal: record a logout-everywhere event. */
+export const recordLogoutEverywhere = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return;
+    await logActivity(ctx, user, {
+      action: "admin.logout_everywhere",
+      targetType: "user",
+      targetId: args.userId,
+    });
   },
 });

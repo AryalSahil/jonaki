@@ -1,10 +1,11 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
   Download,
   Loader2,
   Settings2,
+  Wrench,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,91 +19,42 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { site } from "@/config/site";
+import { formatDate, useReleaseState } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
-type ApkState = "unconfigured" | "checking" | "ready" | "unavailable";
+export type ApkState =
+  | "loading"
+  | "ready"
+  | "pending"
+  | "maintenance"
+  | "external";
 
 /**
- * One shared availability probe for every download button on the page.
- * Same-origin links are checked with HEAD so a missing file or an HTML error
- * page is reported to the visitor instead of downloading a broken response.
- * External release hosts cannot be probed from the browser (CORS), so they are
- * treated as configured and linked directly.
+ * One shared release lookup for every download button on the page. The state
+ * comes from the database (published release + maintenance settings), so the
+ * buttons can never point at a file that is not published. When the site
+ * owner configures `VITE_JONAKI_APK_URL` for an external release host, that
+ * URL is used instead of the managed download endpoint.
  */
-const apkStore = (() => {
-  const url = site.release.apkUrl;
-  let state: ApkState = !url
-    ? "unconfigured"
-    : url.startsWith("/")
-      ? "checking"
-      : "ready";
-  let started = false;
-  const listeners = new Set<() => void>();
+function useApkState(): {
+  state: ApkState;
+  release: NonNullable<ReturnType<typeof useReleaseState>>["release"];
+} {
+  const data = useReleaseState();
 
-  const emit = () => {
-    listeners.forEach((listener) => listener());
-  };
-
-  const verify = async (target: string) => {
-    try {
-      const response = await fetch(target, {
-        method: "HEAD",
-        cache: "no-store",
-      });
-      const contentType = (
-        response.headers.get("content-type") ?? ""
-      ).toLowerCase();
-      const servesAppFile = !contentType.includes("text/html");
-      state = response.ok && servesAppFile ? "ready" : "unavailable";
-    } catch {
-      state = "unavailable";
-    }
-    emit();
-  };
-
-  return {
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    getState() {
-      return state;
-    },
-    start(force = false) {
-      const target = site.release.apkUrl;
-      if (!target) {
-        state = "unconfigured";
-        emit();
-        return;
-      }
-      if (!target.startsWith("/")) {
-        state = "ready";
-        emit();
-        return;
-      }
-      if (started && !force) return;
-      started = true;
-      state = "checking";
-      emit();
-      void verify(target);
-    },
-  };
-})();
-
-function useApkState() {
-  const state = useSyncExternalStore(
-    apkStore.subscribe,
-    apkStore.getState,
-    apkStore.getState,
-  );
-
-  useEffect(() => {
-    apkStore.start();
-  }, []);
-
-  return { state, retry: () => apkStore.start(true) };
+  if (site.release.apkUrl) {
+    return { state: "external", release: data?.release ?? null };
+  }
+  if (data === undefined) {
+    return { state: "loading", release: null };
+  }
+  if (data.maintenance?.downloadsBlocked) {
+    return { state: "maintenance", release: data.release ?? null };
+  }
+  if (!data.release) {
+    return { state: "pending", release: null };
+  }
+  return { state: "ready", release: data.release };
 }
 
 const buttonStyles = {
@@ -116,10 +68,19 @@ const buttonStyles = {
 const buttonBase =
   "inline-flex min-h-12 items-center justify-center gap-2.5 rounded-md px-6 py-3 text-sm font-medium tracking-[-0.01em] transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-70";
 
-const apkFilename = () =>
-  site.release.version
-    ? `Jonaki-Android-v${site.release.version.replace(/^v/i, "")}.apk`
-    : undefined;
+export function downloadHref(release: { version: string } | null): string {
+  if (site.release.apkUrl) return site.release.apkUrl;
+  if (!release) return "#";
+  return "/download/latest.apk";
+}
+
+function downloadFilename(
+  release: { version: string } | null,
+): string | undefined {
+  if (!release) return undefined;
+  const version = release.version.replace(/^v/i, "");
+  return `Jonaki-Android-v${version}.apk`;
+}
 
 export function DownloadButton({
   className,
@@ -130,20 +91,30 @@ export function DownloadButton({
   label?: string;
   variant?: keyof typeof buttonStyles;
 }) {
-  const { state, retry } = useApkState();
+  const { state, release } = useApkState();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"availability" | "install">("availability");
   const classes = cn(buttonBase, buttonStyles[variant], className);
-  const filename = apkFilename();
+  const filename = downloadFilename(release);
   const screenReaderSuffix = /android/i.test(label) ? null : (
     <span className="sr-only"> for Android</span>
   );
 
-  if (state === "ready") {
+  if (state === "loading") {
+    return (
+      <button type="button" className={classes} disabled aria-busy="true">
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        Checking the release…
+      </button>
+    );
+  }
+
+  if (state === "ready" || state === "external") {
     return (
       <a
-        href={site.release.apkUrl}
+        href={downloadHref(release)}
         download={filename}
+        rel="noopener"
         className={classes}
         data-apk-state="ready"
       >
@@ -151,15 +122,6 @@ export function DownloadButton({
         {label}
         {screenReaderSuffix}
       </a>
-    );
-  }
-
-  if (state === "checking") {
-    return (
-      <button type="button" className={classes} disabled aria-busy="true">
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        Checking the release…
-      </button>
     );
   }
 
@@ -186,7 +148,7 @@ export function DownloadButton({
         mode={mode}
         onShowInstall={() => setMode("install")}
         state={state}
-        onRetry={retry}
+        maintenanceMessage={null}
       />
     </>
   );
@@ -226,8 +188,8 @@ export function InstallInstructionsLink({
         onOpenChange={setOpen}
         mode="install"
         onShowInstall={() => undefined}
-        state="unconfigured"
-        onRetry={() => undefined}
+        state="pending"
+        maintenanceMessage={null}
       />
     </>
   );
@@ -237,7 +199,7 @@ function InstallSteps() {
   const steps = [
     {
       title: "Download the APK",
-      body: "Use the download button on this page in Chrome or your usual Android browser. You are downloading an Android app package (.apk), not an app-store install.",
+      body: "Use a download button on this page in Chrome or your usual Android browser. You are downloading an Android app package (.apk), not an app-store install.",
     },
     {
       title: "Open the downloaded file",
@@ -307,102 +269,81 @@ function ReleaseDialog({
   mode,
   onShowInstall,
   state,
-  onRetry,
+  maintenanceMessage,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "availability" | "install";
   onShowInstall: () => void;
   state: ApkState;
-  onRetry: () => void;
+  maintenanceMessage: string | null;
 }) {
-  const pending = state === "unconfigured";
-  const checking = state === "checking";
-  const available = state === "ready";
+  const pending = state === "pending";
   const isInstall = mode === "install";
+  const maintenance = state === "maintenance";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[88vh] max-w-xl gap-0 overflow-y-auto p-6 shadow-none sm:p-7">
         <DialogHeader className="gap-3 text-left">
           <span className="inline-flex items-center gap-2 self-start rounded-full border border-border px-2.5 py-1 text-[0.65rem] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            {pending ? (
+            {isInstall ? (
+              <Settings2 className="h-3 w-3" aria-hidden="true" />
+            ) : maintenance ? (
+              <Wrench className="h-3 w-3" aria-hidden="true" />
+            ) : pending ? (
               <AlertCircle className="h-3 w-3" aria-hidden="true" />
-            ) : available ? (
-              <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
             ) : (
-              <AlertCircle className="h-3 w-3" aria-hidden="true" />
+              <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
             )}
             {isInstall
               ? "Install help"
-              : pending
-                ? "Release pending"
-                : available
-                  ? "Release available"
-                  : "Temporarily unavailable"}
+              : maintenance
+                ? "Maintenance"
+                : pending
+                  ? "Release pending"
+                  : "Release available"}
           </span>
           <DialogTitle className="text-display text-2xl leading-tight sm:text-[1.75rem]">
             {isInstall
               ? "How to install Jonaki on Android"
-              : pending
-                ? "The Android release isn’t published yet."
-                : available
-                  ? "Jonaki is ready to download."
-                  : "That APK isn’t available right now."}
+              : maintenance
+                ? "Downloads are paused for maintenance."
+                : "The Android release isn’t published yet."}
           </DialogTitle>
           <DialogDescription className="text-sm leading-6">
             {isInstall
               ? "Android installs apps from outside an app store in a few extra steps. Here is what to expect, and how to stay safe."
-              : pending
-                ? "The website is ready, but the APK has not been added to the download link yet. Nothing was downloaded."
-                : available
-                  ? "Use the download button to get the official APK file."
-                  : "The configured download link could not be reached, or it returned a web page instead of an Android app file. Nothing was downloaded."}
+              : maintenance
+                ? "Jonaki is temporarily in maintenance mode, so the APK is not being served right now. Nothing was downloaded."
+                : "The website is ready, but no APK has been published by the site administrator yet. Nothing was downloaded."}
           </DialogDescription>
         </DialogHeader>
 
         {isInstall ? (
           <InstallSteps />
-        ) : available ? (
-          <div className="mt-6">
-            <a
-              href={site.release.apkUrl}
-              download={apkFilename()}
-              className={cn(buttonBase, buttonStyles.solid, "w-full")}
-            >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              Download the APK
-            </a>
-          </div>
-        ) : pending || checking ? (
-          <div className="mt-6 space-y-3 rounded-md border border-border bg-muted/50 p-4 text-sm leading-6 text-muted-foreground">
-            <p>
-              {checking
-                ? "Checking the release link now. This only takes a moment."
-                : "This page never links to a placeholder APK or shows a simulated download. When the first public build is published, the download buttons here will point straight to the official file."}
-            </p>
-            {!checking ? (
-              <p>
-                You can read the installation instructions in the meantime so
-                you know what to expect.
-              </p>
-            ) : null}
-          </div>
         ) : (
           <div className="mt-6 space-y-3 rounded-md border border-border bg-muted/50 p-4 text-sm leading-6 text-muted-foreground">
-            <p>
-              This usually means the release link is missing, has moved, or is
-              temporarily offline. Try again in a moment.
-            </p>
-            <p>
-              <button
-                type="button"
-                onClick={onRetry}
-                className="font-medium text-foreground underline decoration-1 underline-offset-4 hover:opacity-70"
-              >
-                Check the link again
-              </button>
-            </p>
+            {maintenance ? (
+              <p>
+                {maintenanceMessage ||
+                  "The site is in maintenance mode. Downloads will work again as soon as maintenance ends."}
+              </p>
+            ) : (
+              <>
+                <p>
+                  When the site administrator uploads and publishes a signed
+                  build from the admin dashboard, the download buttons here will
+                  serve that exact file — with its real version, size, release
+                  date, and a server-calculated checksum. This page never links
+                  to a placeholder APK or shows a simulated download.
+                </p>
+                <p>
+                  You can read the installation instructions in the meantime so
+                  you know what to expect.
+                </p>
+              </>
+            )}
           </div>
         )}
 
@@ -433,16 +374,18 @@ export function ApkStatusLine({
   className?: string;
   live?: boolean;
 }) {
-  const { state } = useApkState();
+  const { state, release } = useApkState();
 
   const message =
-    state === "unconfigured"
-      ? "The Android APK has not been published yet. The download button explains what to expect."
-      : state === "checking"
-        ? "Checking the official release link…"
-        : state === "unavailable"
-          ? "The configured APK link is currently unreachable. No placeholder file is offered."
-          : "Download comes from the official release link. Android may ask for permission to install it.";
+    state === "loading"
+      ? "Checking the latest published release…"
+      : state === "maintenance"
+        ? "Downloads are paused while the site is in maintenance mode."
+        : state === "pending"
+          ? "No APK has been published yet. The download button explains what to expect."
+          : release
+            ? `Version ${release.version} · ${release.fileSizeLabel} · published ${formatDate(release.releaseDate)}`
+            : "Download comes from the official release link.";
 
   return (
     <p

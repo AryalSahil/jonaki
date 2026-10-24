@@ -1,4 +1,3 @@
-import type { MutationCtx } from "../_generated/server";
 import { fail } from "./auth";
 import { SPAM } from "./constants";
 
@@ -48,91 +47,50 @@ export function checkFillTime(renderedAt: number) {
   }
 }
 
-type Countable = {
-  createdAt: number;
-  rateKey?: string;
-};
+/** Enforce duplicate suppression and rate limits for one public submission.
+ *
+ * The caller supplies already-fetched rows (created within the last hour) so
+ * this helper stays agnostic of table names and index shapes. */
+export async function enforceRateLimits(opts: {
+  contentHash: string;
+  /** Rows with a matching contentHash, for duplicate suppression. */
+  duplicates: { contentHash: string }[];
+  /** Rows from the same email in the last hour. */
+  emailRows?: { createdAt: number }[];
+  /** Rows from the same client key in the last hour. */
+  clientKeyRows?: { createdAt: number }[];
+  /** All rows in the last hour, across the form. */
+  globalRows: { createdAt: number }[];
+}) {
+  const hourAgo = Date.now() - 60 * 60 * 1000;
+  const within = (rows: { createdAt: number }[]) =>
+    rows.filter((row) => row.createdAt >= hourAgo).length;
 
-async function countSince<Q extends { take(n: number): Promise<unknown[]> }>(
-  query: Q,
-  cutoff: number,
-  cap: number,
-): Promise<number> {
-  const rows = await query.take(cap + 1);
-  return rows.filter(
-    (row) => (row as { createdAt: number }).createdAt >= cutoff,
-  ).length;
-}
-
-/**
- * Enforce the rate limits for one public submission. `table` selects which
- * records to count; the caller passes the table-specific query builder.
- */
-export async function enforceRateLimits(
-  ctx: MutationCtx,
-  opts: {
-    email?: string;
-    clientKey?: string;
-    contentHash: string;
-    /** Query (with by_createdAt index) for the table receiving the record. */
-    recentByHash: (hash: string) => Promise<{ contentHash: string }[]>;
-    /** Queries used for the hourly caps. */
-    hourlyQueries: {
-      byEmail?: (email: string) => { take(n: number): Promise<unknown[]> };
-      byClientKey?: (
-        key: string,
-      ) => { take(n: number): Promise<unknown[]> };
-      global: { take(n: number): Promise<unknown[]> };
-    };
-  },
-) {
-  const now = Date.now();
-
-  // Duplicate suppression.
-  const duplicates = await opts.recentByHash(opts.contentHash);
-  if (duplicates.length > 0) {
+  if (opts.duplicates.length > 0) {
     fail(
       "DUPLICATE_SUBMISSION",
       "An identical submission was received recently. If you need to add more detail, please wait a few minutes and send a follow-up.",
     );
   }
 
-  const hourAgo = now - 60 * 60 * 1000;
-
-  if (opts.email && opts.hourlyQueries.byEmail) {
-    const count = await countSince(
-      opts.hourlyQueries.byEmail(opts.email.toLowerCase()),
-      hourAgo,
-      SPAM.perEmailPerHour,
+  if (opts.emailRows && within(opts.emailRows) >= SPAM.perEmailPerHour) {
+    fail(
+      "RATE_LIMITED",
+      "Too many submissions from this address in the last hour. Please try again later.",
     );
-    if (count >= SPAM.perEmailPerHour) {
-      fail(
-        "RATE_LIMITED",
-        "Too many submissions from this address in the last hour. Please try again later.",
-      );
-    }
   }
 
-  if (opts.clientKey && opts.hourlyQueries.byClientKey) {
-    const count = await countSince(
-      opts.hourlyQueries.byClientKey(opts.clientKey),
-      hourAgo,
-      SPAM.perIpKeyPerHour,
+  if (
+    opts.clientKeyRows &&
+    within(opts.clientKeyRows) >= SPAM.perIpKeyPerHour
+  ) {
+    fail(
+      "RATE_LIMITED",
+      "Too many submissions in the last hour. Please try again later.",
     );
-    if (count >= SPAM.perIpKeyPerHour) {
-      fail(
-        "RATE_LIMITED",
-        "Too many submissions in the last hour. Please try again later.",
-      );
-    }
   }
 
-  const globalCount = await countSince(
-    opts.hourlyQueries.global,
-    hourAgo,
-    SPAM.globalPerHour,
-  );
-  if (globalCount >= SPAM.globalPerHour) {
+  if (within(opts.globalRows) >= SPAM.globalPerHour) {
     fail(
       "RATE_LIMITED",
       "The form is receiving a high volume of submissions right now. Please try again shortly.",

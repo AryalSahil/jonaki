@@ -1,4 +1,11 @@
-import { Download as DownloadIcon, Smartphone } from "lucide-react";
+import { useState } from "react";
+import {
+  ChevronDown,
+  Download as DownloadIcon,
+  History,
+  ShieldCheck,
+  Smartphone,
+} from "lucide-react";
 
 import {
   ApkStatusLine,
@@ -6,10 +13,39 @@ import {
   InstallInstructionsLink,
 } from "@/components/site/ApkDownload";
 import { Reveal } from "@/components/site/Reveal";
-import { releaseFacts } from "@/config/site";
+import { Button } from "@/components/ui/button";
+import { useQuery } from "convex/react";
+
+import { api } from "@/convex/_generated/api";
+import { formatDate, usePublicState, useReleaseState } from "@/lib/site";
 
 export function Download() {
-  const { facts, requirements, sha256 } = releaseFacts();
+  const state = usePublicState();
+  const releaseState = useReleaseState();
+  const history = useQuery(api.releases.releaseHistory);
+  const [notesOpen, setNotesOpen] = useState(false);
+
+  const release = releaseState?.release ?? null;
+  const maintenance = releaseState?.maintenance ?? null;
+
+  const facts: { label: string; value: string }[] = release
+    ? [
+        { label: "Application version", value: release.version },
+        { label: "APK file size", value: release.fileSizeLabel },
+        ...(release.minAndroid
+          ? [
+              {
+                label: "Android minimum version",
+                value: `${release.minAndroid} and above`,
+              },
+            ]
+          : []),
+        { label: "Release date", value: formatDate(release.releaseDate) },
+      ].filter((fact) => fact.value)
+    : [];
+
+  const previous =
+    history?.filter((item) => item.status === "unpublished") ?? [];
 
   return (
     <section
@@ -79,12 +115,13 @@ export function Download() {
             id="download-heading"
             className="text-display mt-6 text-[clamp(2.25rem,5.4vw,3.75rem)] text-navy-foreground"
           >
-            Meet your new
-            <span className="italic"> walking companion.</span>
+            {state?.content.downloadHeadline || "Meet your new"}{" "}
+            <span className="italic">walking companion.</span>
           </h2>
 
           <p className="mx-auto mt-5 max-w-lg text-[0.975rem] leading-7 text-navy-foreground/70 sm:text-base">
-            Get Jonaki for Android and explore voice-first walking assistance.
+            {state?.content.downloadDescription ||
+              "Get Jonaki for Android and explore voice-first walking assistance."}
           </p>
 
           <div className="mt-9 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
@@ -109,68 +146,116 @@ export function Download() {
                 Release details
               </p>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-2.5 py-1 text-[0.6rem] font-medium uppercase tracking-[0.12em] text-navy-foreground/65">
-                {facts.length > 0 ? "Published" : "Not yet published"}
+                {release ? "Published" : "Not yet published"}
               </span>
             </div>
 
-            {facts.length > 0 ? (
-              <dl className="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2">
-                {facts.map((fact) => (
-                  <div
-                    key={fact.label}
-                    className="flex items-baseline justify-between gap-3 border-b border-white/10 pb-3"
-                  >
-                    <dt className="text-xs text-navy-foreground/65">
-                      {fact.label}
-                    </dt>
-                    <dd className="text-sm font-medium text-navy-foreground">
-                      {fact.value}
-                    </dd>
+            {release ? (
+              <>
+                <dl className="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                  {facts.map((fact) => (
+                    <div
+                      key={fact.label}
+                      className="flex items-baseline justify-between gap-3 border-b border-white/10 pb-3"
+                    >
+                      <dt className="text-xs text-navy-foreground/65">
+                        {fact.label}
+                      </dt>
+                      <dd className="text-sm font-medium text-navy-foreground">
+                        {fact.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+
+                {release.releaseNotes ? (
+                  <div className="mt-5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setNotesOpen((open) => !open)}
+                      aria-expanded={notesOpen}
+                      aria-controls="release-notes"
+                      className="h-auto min-h-9 justify-between gap-2 px-0 py-1 text-xs font-medium text-navy-foreground/75 hover:bg-transparent hover:text-navy-foreground"
+                    >
+                      What changed in this release
+                      <ChevronDown
+                        className={notesOpen ? "h-3.5 w-3.5 rotate-180" : "h-3.5 w-3.5"}
+                        aria-hidden="true"
+                      />
+                    </Button>
+                    {notesOpen ? (
+                      <p
+                        id="release-notes"
+                        className="mt-2 whitespace-pre-wrap rounded-md border border-white/10 bg-white/[0.03] p-3.5 text-sm leading-6 text-navy-foreground/70"
+                      >
+                        {release.releaseNotes}
+                      </p>
+                    ) : null}
                   </div>
-                ))}
-              </dl>
+                ) : null}
+              </>
             ) : (
               <p className="mt-4 text-sm leading-6 text-navy-foreground/70">
                 Version, APK size, minimum Android version, and release date
-                will be listed here once the first public build is published.
-                This page does not show release details it cannot verify.
+                appear here as soon as the site administrator publishes the
+                first signed build from the admin dashboard. This page does not
+                show release details it cannot verify.
               </p>
             )}
 
-            {requirements.length > 0 ? (
-              <div className="mt-6">
-                <p className="text-xs font-medium text-navy-foreground/75">
-                  Device requirements
-                </p>
-                <ul className="mt-2 space-y-1.5">
-                  {requirements.map((requirement) => (
-                    <li
-                      key={requirement}
-                      className="flex gap-2 text-sm leading-6 text-navy-foreground/70"
-                    >
-                      <span aria-hidden="true" className="text-gold">
-                        ·
-                      </span>
-                      {requirement}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {sha256 ? (
+            {release?.sha256 ? (
               <div className="mt-6 border-t border-white/10 pt-5">
-                <p className="text-xs font-medium text-navy-foreground/75">
-                  SHA-256 checksum
+                <p className="flex items-center gap-1.5 text-xs font-medium text-navy-foreground/75">
+                  <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                  SHA-256 checksum (calculated on the server)
                 </p>
                 <code className="mt-2 block break-all font-mono text-[0.7rem] leading-5 text-navy-foreground/60">
-                  {sha256}
+                  {release.sha256}
                 </code>
                 <p className="mt-2 text-xs leading-5 text-navy-foreground/65">
                   Compare this value with the file you downloaded using a
                   checksum tool before installing.
                 </p>
               </div>
+            ) : null}
+
+            {previous.length > 0 ? (
+              <div className="mt-6 border-t border-white/10 pt-5">
+                <p className="flex items-center gap-1.5 text-xs font-medium text-navy-foreground/75">
+                  <History className="h-3.5 w-3.5" aria-hidden="true" />
+                  Previous releases
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {previous.slice(0, 5).map((item) => (
+                    <li
+                      key={`${item.version}-${item.releaseDate}`}
+                      className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs text-navy-foreground/65"
+                    >
+                      <span className="font-medium text-navy-foreground/85">
+                        v{item.version}
+                      </span>
+                      <span>
+                        {formatDate(item.releaseDate)}
+                        {item.minAndroid ? ` · Android ${item.minAndroid}+` : ""}
+                        {` · ${item.fileSizeLabel}`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-[0.7rem] leading-5 text-navy-foreground/55">
+                  Only the current version is served by the download button.
+                  Older builds are kept here for reference and are no longer
+                  offered for download.
+                </p>
+              </div>
+            ) : null}
+
+            {maintenance ? (
+              <p className="mt-6 rounded-md border border-gold/40 bg-gold/10 p-3.5 text-xs leading-5 text-navy-foreground/80">
+                Maintenance mode is currently active. Downloads may be paused —
+                the maintenance notice above explains.
+              </p>
             ) : null}
           </div>
 

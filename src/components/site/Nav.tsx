@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router";
 import { Menu, X } from "lucide-react";
 
 import { DownloadButton } from "@/components/site/ApkDownload";
@@ -21,10 +22,18 @@ const links = [
   { href: "#faq", id: "faq", label: "FAQ" },
 ];
 
+/** Cross-page links that navigate away from the landing page. */
+const pageLinks = [
+  { to: "/feedback", label: "Feedback" },
+  { to: "/contact", label: "Contact" },
+];
+
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState("home");
   const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+  const onLanding = location.pathname === "/";
 
   useEffect(() => {
     let frame = 0;
@@ -75,20 +84,42 @@ export function Nav() {
 
         <nav aria-label="Main" className="hidden md:block">
           <ul className="flex items-center gap-7">
-            {links.map((link) => (
-              <li key={link.href}>
-                <a
-                  href={link.href}
-                  aria-current={active === link.id ? "location" : undefined}
+            {(onLanding ? links : [{ href: "/", id: "home", label: "Home" }]).map(
+              (link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    aria-current={
+                      onLanding && active === link.id ? "location" : undefined
+                    }
+                    className={cn(
+                      "inline-flex min-h-9 items-center rounded-sm text-[0.8125rem] tracking-[-0.005em] transition-colors",
+                      onLanding && active === link.id
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ),
+            )}
+            {pageLinks.map((link) => (
+              <li key={link.to}>
+                <Link
+                  to={link.to}
+                  aria-current={
+                    location.pathname === link.to ? "page" : undefined
+                  }
                   className={cn(
                     "inline-flex min-h-9 items-center rounded-sm text-[0.8125rem] tracking-[-0.005em] transition-colors",
-                    active === link.id
+                    location.pathname === link.to
                       ? "text-foreground"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {link.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -148,22 +179,49 @@ export function Nav() {
               className="border-t border-border px-5 pb-6"
             >
               <ul>
-                {links.map((link) => (
-                  <li key={link.href} className="border-b border-border/70">
-                    <a
-                      href={link.href}
-                      onClick={() => setMenuOpen(false)}
-                      aria-current={active === link.id ? "location" : undefined}
-                      className="flex min-h-14 items-center justify-between py-3 text-base text-foreground"
-                    >
-                      {link.label}
-                      <span
-                        aria-hidden="true"
-                        className="text-xs text-muted-foreground"
+                {(onLanding
+                  ? [
+                      ...links.map((l) => ({ label: l.label, to: l.href })),
+                      ...pageLinks.map((l) => ({ label: l.label, to: l.to })),
+                    ]
+                  : [
+                      { label: "Home", to: "/" },
+                      ...pageLinks.map((l) => ({ label: l.label, to: l.to })),
+                    ]
+                ).map((link, index) => (
+                  <li key={link.to} className="border-b border-border/70">
+                    {link.to.startsWith("#") ? (
+                      <a
+                        href={link.to}
+                        onClick={() => setMenuOpen(false)}
+                        className="flex min-h-14 items-center justify-between py-3 text-base text-foreground"
                       >
-                        0{links.indexOf(link) + 1}
-                      </span>
-                    </a>
+                        {link.label}
+                        <span
+                          aria-hidden="true"
+                          className="text-xs text-muted-foreground"
+                        >
+                          0{index + 1}
+                        </span>
+                      </a>
+                    ) : (
+                      <Link
+                        to={link.to}
+                        onClick={() => setMenuOpen(false)}
+                        aria-current={
+                          location.pathname === link.to ? "page" : undefined
+                        }
+                        className="flex min-h-14 items-center justify-between py-3 text-base text-foreground"
+                      >
+                        {link.label}
+                        <span
+                          aria-hidden="true"
+                          className="text-xs text-muted-foreground"
+                        >
+                          0{index + 1}
+                        </span>
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
