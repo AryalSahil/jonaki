@@ -11,7 +11,14 @@ import NotFound from "./pages/NotFound";
 import "./index.css";
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL as string | undefined;
-const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
+// Without a configured deployment, fall back to an unreachable placeholder so
+// hooks like useQuery stay in their loading state instead of crashing.
+const convex = new ConvexReactClient(
+  convexUrl || "https://missing-convex-url.convex.cloud",
+);
+if (!convexUrl) {
+  console.warn("[Convex] VITE_CONVEX_URL is not set; backend data is unavailable.");
+}
 
 /** Silent error boundary — if VlyToolbar crashes it renders nothing instead of
  *  crashing the whole app (e.g. hook errors in the browser runtime). */
@@ -116,31 +123,15 @@ function App() {
 
 const root = createRoot(document.getElementById("root")!);
 
-if (convex) {
-  root.render(
-    <StrictMode>
-      <RootErrorBoundary>
-        <ToolbarErrorBoundary>
-          <VlyToolbar />
-        </ToolbarErrorBoundary>
-        <ConvexAuthProvider client={convex}>
-          <App />
-        </ConvexAuthProvider>
-      </RootErrorBoundary>
-    </StrictMode>,
-  );
-} else {
-  // No Convex URL configured — render the static site shell with a clear
-  // notice rather than crashing. The public site still works offline of the
-  // backend except for forms, submissions, and downloads.
-  root.render(
-    <StrictMode>
-      <RootErrorBoundary>
-        <ToolbarErrorBoundary>
-          <VlyToolbar />
-        </ToolbarErrorBoundary>
+root.render(
+  <StrictMode>
+    <RootErrorBoundary>
+      <ToolbarErrorBoundary>
+        <VlyToolbar />
+      </ToolbarErrorBoundary>
+      <ConvexAuthProvider client={convex}>
         <App />
-      </RootErrorBoundary>
-    </StrictMode>,
-  );
-}
+      </ConvexAuthProvider>
+    </RootErrorBoundary>
+  </StrictMode>,
+);
