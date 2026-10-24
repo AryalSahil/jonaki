@@ -8,10 +8,6 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
-import Feedback from "./pages/Feedback";
-import Contact from "./pages/Contact";
-import AdminLogin from "./pages/admin/AdminLogin";
-import AdminDashboard from "./pages/admin/AdminDashboard";
 import "./index.css";
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL as string | undefined;
@@ -112,11 +108,6 @@ function App() {
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/feedback" element={<Feedback />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/:section" element={<AdminDashboard />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
