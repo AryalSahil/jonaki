@@ -1,4 +1,5 @@
-import type { Doc, MutationCtx, QueryCtx } from "../_generated/server";
+import type { Doc } from "../_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { LIMITS } from "./constants";
 import { cleanText } from "./spam";
 
